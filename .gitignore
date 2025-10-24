@@ -1,0 +1,57 @@
+# Zig build artifacts
+zig-cache/
+zig-out/
+.zig-cache/
+
+# Build outputs
+*.o
+*.so
+*.a
+*.dylib
+*.dll
+*.exe
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*_rsa
+*_dsa
+*_ecdsa
+*_ed25519
+
+# Test outputs and temp files
+*.log
+*.tmp
+/tmp/
+test_*.zig
+test_*
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Local development
+local/
+scratch/
+notes.md
+TODO.md
+
+# Dependencies (if using external packages)
+.deps/
+vendor/
