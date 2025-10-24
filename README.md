@@ -1,35 +1,107 @@
-# safe-curl (Zig Implementation)
+# safe-curl
 
-A Zig implementation of `safe-curl` - a tool that analyzes shell scripts before executing them to detect potentially malicious patterns.
+A command-line tool that analyzes shell scripts before executing them to detect potentially malicious patterns. Helps prevent accidentally running harmful `curl | bash` install scripts.
+
+**Two implementations available**:
+- **Bash version** (recommended): Full-featured with AI-powered analysis
+- **Zig version**: Work-in-progress native implementation
 
 ## Features
 
-- **Pattern-based Analysis**: Detects dangerous operations like:
+### Bash Version (`./safe-curl`)
+
+- **🤖 AI-Powered Analysis**: Uses Claude (Anthropic) or GPT-4 (OpenAI) for intelligent threat detection
+  - Context-aware security analysis
+  - Natural language explanations
+  - Sophisticated pattern recognition
+  - Detailed recommendations
+
+- **Pattern-Based Fallback**: Works without API keys using regex patterns
   - Recursive file deletion (`rm -rf`)
-  - Code obfuscation (base64 decoding)
-  - Dynamic code execution (`eval`)
+  - Code obfuscation (base64 decoding, eval)
   - Downloading and executing additional scripts
-  - Privilege escalation (`sudo`)
+  - Privilege escalation (sudo)
   - System file modifications
   - Shell configuration changes
+  - PATH modifications
 
-- **Color-coded Output**: Critical issues, warnings, and info messages with ANSI colors
+- **Minimal Dependencies**: Pure bash script (Python optional for JSON parsing)
+- **Color-coded Output**: Critical issues, warnings, and info messages
 - **Interactive Execution**: Prompts before executing analyzed scripts
 - **Risk Assessment**: Automatically calculates risk level (HIGH/MEDIUM/LOW)
-- **Zero Dependencies**: Single binary, no external dependencies required
 
-## Why Zig?
+### Zig Version (`zig-out/bin/safe-curl`)
 
-Advantages over the bash implementation:
+- **Pattern-based Analysis**: Core detection patterns implemented
+- **Zero Dependencies**: Single compiled binary
+- **Type Safety**: Zig's compile-time guarantees
+- **AI Analysis**: Detected but not yet implemented
 
-1. **Single Binary**: No dependencies on bash, curl, or python - everything is compiled into one binary
-2. **Better Performance**: Compiled code is faster than interpreted bash
-3. **Type Safety**: Zig's type system catches errors at compile time
-4. **More Transparent**: All code is in one language (~413 lines), easier to audit
-5. **Highly Portable**: Single binary can be distributed without worrying about dependencies
-6. **Small Size**: Only 120KB-342KB depending on optimization level
+## Quick Start
 
-## Building
+### Using the Bash Version (Recommended)
+
+The bash version is production-ready with full AI support:
+
+```bash
+# Make executable
+chmod +x safe-curl
+
+# With AI-powered analysis (recommended)
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
+# OR
+export OPENAI_API_KEY="your-openai-api-key"
+
+# Analyze a script
+./safe-curl https://example.com/install.sh
+
+# Without API keys (pattern matching)
+./safe-curl https://example.com/install.sh
+```
+
+**Installation**:
+```bash
+# Copy to your PATH
+sudo cp safe-curl /usr/local/bin/
+# Or user-local
+mkdir -p ~/.local/bin && cp safe-curl ~/.local/bin/
+```
+
+See [EXAMPLES.md](EXAMPLES.md) for detailed usage examples.
+
+### AI-Powered Analysis
+
+Set up your API key for intelligent threat detection:
+
+```bash
+# For Anthropic Claude (recommended, ~$0.003 per analysis)
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Or for OpenAI GPT-4 (~$0.0015 per analysis)
+export OPENAI_API_KEY="sk-..."
+```
+
+**What AI analysis provides**:
+- Context-aware security findings
+- Natural language explanations of what the script does
+- Specific line numbers and security implications
+- Overall risk assessment with reasoning
+- Recommendations for safe usage
+
+**Without API keys**: Falls back to regex pattern matching (free, works offline)
+
+## Why Two Versions?
+
+**Bash version**: Production-ready with full AI integration. Use this for actual security analysis.
+
+**Zig version**: Educational experiment exploring systems programming with Zig 0.15. Demonstrates:
+- Memory management patterns
+- Error handling with try/catch
+- Struct-based architecture
+- Standard library usage
+- Cross-compilation capabilities
+
+## Building the Zig Version
 
 Requires Zig 0.15.x:
 
@@ -97,15 +169,31 @@ zig build -Doptimize=ReleaseSmall -Dtarget=x86_64-windows
 
 ## Usage
 
+### Bash Version
+
 ```bash
-# Analyze a script from a URL
-safe-curl https://example.com/install.sh
+# With AI analysis
+export ANTHROPIC_API_KEY="your-key"
+./safe-curl https://example.com/install.sh
+
+# Read from stdin
+curl https://example.com/install.sh | ./safe-curl -
 
 # Show help
-safe-curl --help
+./safe-curl --help
 ```
 
-The tool will:
+### Zig Version
+
+```bash
+# Analyze a script from a URL
+zig-out/bin/safe-curl https://example.com/install.sh
+
+# Show help
+zig-out/bin/safe-curl --help
+```
+
+Both versions:
 1. Fetch the script from the URL
 2. Analyze it for malicious patterns
 3. Display color-coded findings
@@ -115,8 +203,48 @@ The tool will:
 
 ## Example Output
 
+### Bash Version with AI
+
 ```bash
-$ safe-curl https://example.com/install.sh
+$ export ANTHROPIC_API_KEY="your-key"
+$ ./safe-curl https://raw.githubusercontent.com/tristanisham/zvm/master/install.sh
+
+=== Safe Curl v2.0.0 ===
+Using AI-powered analysis (anthropic)...
+
+Fetching script from: https://raw.githubusercontent.com/...
+
+Contacting anthropic API...
+
+=== AI Analysis Results ===
+
+[WARNING] Downloads files over HTTPS without checksum verification (Lines: 22-24, 43-45)
+[WARNING] Modifies PATH environment variable with user-writable directories (Lines: 119-131)
+[INFO] Creates directories in user's home without checking available space (Line: 28, 47)
+[INFO] Uses potentially unsafe pattern matching for SHELL variable (Lines: 96, 98, 116, 134)
+
+Script Purpose:
+This is an installer script for ZVM (Zig Version Manager). The script detects OS and
+architecture, downloads appropriate ZVM binary from GitHub releases, extracts it to
+~/.zvm/self, and configures shell environment variables. While there are some security
+considerations, the overall risk is low because downloads are from GitHub releases over
+HTTPS and only operates in user's home directory.
+
+=== Analysis Summary ===
+Critical issues: 0
+Warnings: 2
+Info: 2
+
+RISK LEVEL: LOW
+No major issues detected, but always review scripts before running.
+
+Do you want to execute this script? (yes/no):
+```
+
+### Pattern-Based Analysis (No API Key)
+
+```bash
+$ ./safe-curl https://example.com/install.sh
 
 === Safe Curl v2.0.0 ===
 Analyzing script for potentially malicious patterns...
@@ -136,13 +264,6 @@ Fetching script from: https://example.com/install.sh
 Critical issues: 0
 Warnings: 2
 Info: 1
-
-=== Script Content ===
-     1  #!/bin/bash
-     2  # Installation script
-     ...
-
-=== End of Script ===
 
 RISK LEVEL: MEDIUM
 This script requires elevated privileges or modifies system files.
@@ -170,17 +291,16 @@ Do you want to execute this script? (yes/no):
 - Git clones
 - PATH modifications
 
-## Comparison with Bash Version
+## Dependencies
 
-| Feature | Bash | Zig |
-|---------|------|-----|
-| Dependencies | bash, curl, python (optional) | None |
-| Binary Size | N/A (script) | 120KB-342KB |
-| Execution Speed | Slower (interpreted) | Faster (compiled) |
-| Distribution | Need to ensure dependencies | Single binary |
-| AI Analysis | Supported | Detected but not yet implemented |
-| Code Lines | ~500 | ~413 |
-| Audit Complexity | Multiple tools/languages | Single language |
+### Bash Version
+- **Required**: bash, curl
+- **Optional**: python3 (for reliable JSON parsing in AI mode)
+- **For AI**: ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable
+
+### Zig Version
+- **Build**: Zig 0.15.x
+- **Runtime**: Uses curl subprocess for HTTP requests (present on all systems)
 
 ## Security Notes
 
@@ -189,17 +309,29 @@ Do you want to execute this script? (yes/no):
 - **Does NOT guarantee complete security**
 - Always review the script content yourself
 - Use caution with scripts from unknown sources
-- The tool uses `curl` subprocess for HTTP fetching (standard on all systems)
+- **AI mode**: Script content is sent to third-party APIs (Anthropic/OpenAI)
+
+## Cost Considerations (Bash Version)
+
+- **Anthropic Claude**: ~$0.003 per analysis (Claude Sonnet 3.5)
+- **OpenAI GPT-4o-mini**: ~$0.0015 per analysis
+- **Pattern matching**: Free (no API calls)
 
 ## Project Structure
 
 ```
 safe-curl-zig/
+├── safe-curl          # Bash implementation (production-ready, AI-enabled)
+├── EXAMPLES.md        # Usage examples for bash version
+├── README.md          # This file
 ├── build.zig          # Zig build configuration
 ├── src/
-│   └── main.zig      # Main implementation (~413 lines)
-├── .gitignore
-└── README.md
+│   └── main.zig      # Zig implementation (~413 lines, WIP)
+├── tests/             # Test files
+├── zig-out/
+│   └── bin/
+│       └── safe-curl  # Compiled Zig binary
+└── .gitignore
 ```
 
 ## Development
@@ -221,20 +353,31 @@ Free to use for security testing, educational purposes, and personal use.
 
 ## Contributing
 
-This is a Zig port of the original bash `safe-curl`. Contributions welcome:
-- Add more detection patterns
-- Improve pattern matching
-- Add proper Zig HTTP client implementation (currently uses curl subprocess)
-- Add AI analysis support
-- Add tests
-- Performance improvements
+Both implementations welcome contributions:
+
+**Bash version**:
+- Additional detection patterns
+- Support for more AI providers
+- Improved error handling
+- Better JSON parsing without python dependency
+
+**Zig version**:
+- Add AI analysis support (port from bash)
+- Native HTTP client implementation
+- Add stdin support
+- Comprehensive test suite
+- Performance optimizations
 
 ## Future Improvements
 
+### Bash Version
+- [ ] Support for more AI providers (Gemini, etc.)
+- [ ] Configurable pattern rules via config file
+- [ ] JSON output mode for CI/CD integration
+
+### Zig Version
 - [ ] Native HTTP client (remove curl dependency)
 - [ ] AI-powered analysis integration
-- [ ] Configurable pattern rules
-- [ ] JSON output mode
-- [ ] CI/CD integration examples
+- [ ] Stdin support (`curl | safe-curl -`)
 - [ ] Comprehensive test suite
 - [ ] Man page documentation
